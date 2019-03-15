@@ -1,0 +1,480 @@
+
+/***** Siwak Website Javascript Tweaks & Scripts ******/
+	$(document).ready(function(){
+	
+	$.ajaxSetup({ cache: false });
+	
+	var site_portal;
+	if(pathURL("domestic"))
+		site_portal = 'domestic';
+	else if(pathURL("international"))
+		site_portal = 'international';
+	
+	var productsXMLurl, product_folder, newsXMLurl;
+	var filename_productsXML = 'XML_products_info_' + site_portal + '.xml', filename_newsXML = 'news_' + site_portal + '.xml', default_xml_path = '../scripts/xml/';
+	var isIt_EnquiryPage = pathURL('contact-enquiry.html'),
+	isIt_SearchResultsPage = pathURL('searchResults.html'), 
+	enquiry_urlPath;
+
+	if(pathURL('/products/')){		//in products folder
+		productsXMLurl = '../' + default_xml_path + filename_productsXML;
+		product_folder = '';
+		newsXMLurl 	   = '../' + default_xml_path + filename_newsXML;
+		enquiry_urlPath = '../'
+		ProductsMenu();
+	 }
+	 
+	else if(!pathURL('/products/')){	//root folder (domestic or international)
+		productsXMLurl = default_xml_path + filename_productsXML;
+		product_folder = 'products/';
+		newsXMLurl 	   = default_xml_path + filename_newsXML;
+		enquiry_urlPath = '';
+	 }
+	
+	var xmlData, data_xml, xmlMAP;
+	
+	var productsXMLload = $.ajax({ url: productsXMLurl, dataType: "xml"  });
+	
+	productsXMLload.done(function(xmlResponse){	
+		xmlData = data_xmlParse(xmlResponse);
+	
+		autocomplete_search(xmlData, product_folder);
+	
+		if(isIt_SearchResultsPage)
+			SearchResultsPageLoaded(xmlData, product_folder);
+		if(isIt_EnquiryPage)
+			EnquiryPageLoaded(xmlData);
+		});
+
+	productsXMLload.fail(function(){
+		console.log('Error: Products XML could not be loaded.');
+	});
+//START addonScripts on Document ready //
+//START CSS For Longer Title Names of Products in CATEGORIES Pages
+ var minHeight; window.productCategoriesHeight = 500;
+	
+	$('.w-portfolio .w-portfolio-item h2.w-portfolio-item-title').each(function() {
+     
+		minHeight = window.productCategoriesHeight;
+	 
+		if(minHeight > parseInt($(this).css('height'))) {
+		 minHeight = parseInt($(this).css('height'));
+		 window.productCategoriesHeight = minHeight;
+		}
+	});
+	
+ var itemHeightStored = window.productCategoriesHeight;
+ $('.w-portfolio .w-portfolio-item h2.w-portfolio-item-title').each(function(){
+	if(parseInt($(this).css('height')) > itemHeightStored)
+	$(this).css({ 'line-height' : '17px', 'height' : itemHeightStored + 'px' });
+ });
+//END CSS For Longer Title Names of Products in CATEGORIES Pages
+//Start Submenu Repositioning to Above default //1024
+ if( $( document ).width() > 1020){
+ $('.domestic .w-nav-item.level_2.has_sublevel').each(function(i){
+	var offset_MenuHeight, change_menuHeight =  false;
+	if(i==1){ offset_MenuHeight = 10; change_menuHeight = true }
+	if(i==2){ offset_MenuHeight = 9; change_menuHeight = true }
+	if(i==3){ offset_MenuHeight = 6; change_menuHeight = true }
+	if(i==4 || i==6 || i==5){ offset_MenuHeight = 4; change_menuHeight = true; }
+	if(i==7){ offset_MenuHeight = 3; change_menuHeight = true }
+	if(i==9 || i==10){ offset_MenuHeight = 2; change_menuHeight = true }
+	if(i==10){ offset_MenuHeight = 1; change_menuHeight = true }
+	
+	  if(change_menuHeight){
+		$(this).hover(function(){
+		var $list = $(this).children('ul');
+		var sublist_h = parseInt($(this).css('height'));
+		$list.css('top', '-' + (parseInt($list.css('height')) - (sublist_h * offset_MenuHeight)) + 'px');
+		});
+	 }
+	});
+ $('.international .w-nav-item.level_2.has_sublevel').each(function(i){
+	var offset_MenuHeight, change_menuHeight =  false;
+	if(i==1){ offset_MenuHeight = 10; change_menuHeight = true }
+	if(i==2){ offset_MenuHeight = 5; change_menuHeight = true }
+	if(i==3){ offset_MenuHeight = 8; change_menuHeight = true }
+	if(i==4){ offset_MenuHeight = 2; change_menuHeight = true }
+	if(i==5){ offset_MenuHeight = 3; change_menuHeight = true }	
+	if(change_menuHeight){
+		$(this).hover(function(){
+		var $list = $(this).children('ul');
+		var sublist_h = parseInt($(this).css('height'));
+		$list.css('top', '-' + (parseInt($list.css('height')) - (sublist_h * offset_MenuHeight)) + 'px');
+		});
+	} });
+ }
+//END Submenu Repositioning
+//START Products Accordion Menu ////////*
+
+  function ProductsMenu () {
+ $('#products_nav.domestic').navgoco({
+	accordion: true,
+	save: true,
+	cookie: { name: 'nav_domestic', expires: false, path: '/' },
+	slide: { duration: 400, easing: 'swing' }
+	});
+$('#products_nav.international').navgoco({
+	accordion: true,
+	save: true,
+	cookie: { name: 'nav_international', expires: false, path: '/' },
+	slide: { duration: 400, easing: 'swing' }
+	});
+ $("li.products a.w-nav-anchor.level_1").click(function(e) {
+	e.preventDefault();
+	$('html,body').animate({ scrollTop: $("#products_nav").offset().top - $('.l-header').height() }, 1000);
+	$('#products_nav.domestic.min, #products_nav.international.min').navgoco('toggle', true, 0);
+ });
+$('#products_nav.domestic.expand, #products_nav.international.expand').navgoco('toggle', true, 0);
+$('#products_nav.domestic.min, #products_nav.international.min').navgoco('toggle', false);
+}
+//END Products Accordian Menu ///////
+//START Print on Product Pages
+ $('h3 a.printProduct').on('click', function(){
+  $.getScript( "../../scripts/js/jquery.print.js", function() {
+  
+	var productInfo_logo = $('img.w-logo-img-overlay').attr('src'),
+	productInfo_img = $('a.magnify_product img.product_image').attr('src'),
+	productInfo_title = $('.l-submain.for_pagehead.color_primary').html(),
+	productInfo_text = $('.product_info ul.info').html();
+
+	var productInfo = "<center><img src='" + productInfo_logo + "' width='250' /></center><br>" + productInfo_title + "<table border='0' width='100%'><tr><td><br>" + productInfo_text + "</td><td><img src='" + productInfo_img + "' width='150' height='150'/></td></tr></table>";
+
+	$('.hidden').show();
+					
+	$(".r_features").print({
+		//Use Global styles
+		globalStyles : true,
+		mediaPrint : false,
+		iframe : true,
+		append : ".r_configuration, .w-copyright",
+		prepend : productInfo
+		});
+	$('.hidden').hide();  
+  });
+ });
+// END Print Product Pages. 
+// START NEWS Ajax Load
+	$.ajax({
+    url: newsXMLurl + "?timeNow=" + new Date().getTime(), 
+    dataType: "xml",
+	
+    success: function parse(xmlResponse){
+	$(xmlResponse).find("item").each(function() {
+	var heading = $(this).find('heading').text();
+	var description = $(this).find('description').text();
+
+	news = "<b>" + heading + "</b></br>" + description;
+	
+	$('.w-bloglist-list ul').append($('<li>', {html: news}));
+	});
+        $('.w-bloglist-list').easyTicker({
+		direction: 'up',
+		easing: 'easeInOutBack',
+		speed: 'slow',
+		interval: 3000,
+		height: 'auto',
+		visible: 1,
+		mousePause: 1,
+		controls: {
+			up: '.up',
+			down: '.down',
+			toggle: '.toggle',
+			stopText: 'Stop !!!'
+			}
+		});
+	  
+	},  error: function(){console.log('Error: News Ticker could not be loaded.');}
+  });
+// END News Loading. 
+//Start enqForm Close Button
+ $('.enqForm .g-alert-close').on('click', function(){
+ var region_enq = (pathURL('domestic') == true) ? 'DomesticEnquiryData' : 'InternationalEnquiryData';
+ if(typeof(Storage) !== "undefined") {
+ localStorage.removeItem(region_enq);
+ }
+ });
+//END enqForm Close Button
+//START #ANCHOR points Animation
+if(window.location.hash && $(window.location.hash).length){
+$('html,body').delay(1000).animate({ scrollTop: $(window.location.hash).offset().top - $('.l-header').height() }, 1000);
+}
+//END Anchor Points Animation
+// START of SearchResults Redirection Function //
+ $( ".w-search-form.show_hidden" ).submit(function( event ) {
+	var s_path = '';
+	if(pathURL('products'))
+		s_path = '../';
+		var query_s = $('input#q').val();
+		url = s_path + 'searchResults.html?q=' + query_s;
+		document.location.href = url;
+		event.preventDefault();
+	 });
+ // END of SearchResults Redirection Function //
+ // START of redirecting to Enquiry Page via BUTTON clicks //
+ $('.product_info center button').each(function(){
+  var msgRequest_type = $('span', this).text().toLowerCase();
+  var product_xml_id = $("meta[name=xml_id]").attr('content');
+  var region_enq = (pathURL('domestic') == true) ? 'DomesticEnquiryData' : 'InternationalEnquiryData';
+   $(this).on('click', function(e){
+	e.preventDefault();
+	var dataToStore = { "type": msgRequest_type, "xml_id": product_xml_id };
+	if(typeof(Storage) !== "undefined") {
+	localStorage.setItem(region_enq, JSON.stringify(dataToStore));
+	}
+	document.location.href = '../contact-enquiry.html';
+   //document.location.href = '../contact-enquiry.html?type=' + msgRequest_type + '&xml_id=' + product_xml_id;
+   });
+ });
+ // END of redirecting to Enquiry Page via BUTTON clicks //
+ }); //end (document).ready()
+///// END addonScripts on Document ready //////
+// START of Loading of Product divs on the SearchResults.html page via Search String //
+function SearchResultsPageLoaded(e_qString, p_folder) {
+	var path_url = window.location.href,
+	 s_query = path_url.substr(path_url.indexOf("=") + 1),
+	 displayError = (!(getUrlParameter('q'))) ? "Search keywords could not be found! Try searching again!" : "Sorry, " +  s_query.split('%20').join(' ') + " was not found";
+	 
+	function alt_names(alt){ if(alt != '0') return alt; }
+	 
+	for(i=0;i<e_qString.length;i++){
+	
+	var p_xml_string = e_qString[i].p_title.replace(/&reg;/g, "").replace(/&trade;/g, "") + ' ' + e_qString[i].p_gen_name + ' ' + alt_names(e_qString[i].p_query),
+		results_string = '', error,	found_string, s_string2 = '';
+		if (s_query) s_string2 = s_query.toLowerCase().split('%20').join(' ');
+		
+		if (s_string2 && p_xml_string.toLowerCase().indexOf(s_string2) > -1) {
+		 results_string = '<div class="w-portfolio-item"><div class="w-portfolio-item-h"><a class="w-portfolio-item-anchor" href="' + p_folder + e_qString[i].p_url + '"><div class="w-portfolio-item-image"><img class="w-portfolio-item-image-first" src="' + p_folder + 'images_product/' + e_qString[i].p_img + '" alt=""><div class="w-portfolio-item-meta"><h2 class="w-portfolio-item-title">' + e_qString[i].p_title + '</h2><span class="w-portfolio-item-arrow"></span></div></div></a></div></div>';
+		 found_string = true;  
+		}
+	    if (found_string) {
+         $('.w-portfolio-list-h').append(results_string);
+        }
+		var contentFound = $('.w-portfolio-list-h .w-portfolio-item').length;
+		if (contentFound) {			//For displaying error text
+		  $('#error_div').text("");
+		} else if (!contentFound){
+		   $('#error_div').html(displayError);
+		}
+	}
+ }
+// END of loading of divs on SearchResults.html page //
+// START of Loading content on Enquiry Page //
+function EnquiryPageLoaded(e_enqArr) {
+	
+	var dataStored, storedData, enq_type, enq_xml
+	
+	var region_enq = (pathURL('domestic') == true) ? 'DomesticEnquiryData' : 'InternationalEnquiryData';
+	if(typeof(Storage) !== "undefined") {
+	dataStored = localStorage.getItem(region_enq),
+	storedData = JSON.parse(dataStored);
+	}
+	
+	if(dataStored){
+	enq_type = storedData.type;
+	enq_xml = storedData.xml_id;
+	$('.enqForm').removeClass('hidden');
+	}
+	
+	var xml_i;
+	for(i=0;i<e_enqArr.length;i++){
+	if(enq_xml && enq_xml==e_enqArr[i].pxml_id)
+		xml_i = i;
+	}
+ 
+	var states = ['--Select your State--','Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jammu & Kashmir','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Orissa','Punjab','Rajasthan','Sikkim','Tamil Nadu','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Andaman and Nicobar Islands','Chandigarh','Dadra & Nagar Haveli','Daman & Diu','Lakshadweep','Puducherry'];
+	var countries = ['--Select your Country--','Afghanistan','Aland Islands','Albania','Algeria','American Samoa','Andorra','Angola','Anguilla','Antarctica','Antigua And Barbuda','Argentina','Armenia','Aruba','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bermuda','Bhutan','Bolivia Plurinational State Of','Bonaire Sint Eustatius And Saba','Bosnia And Herzegovina','Botswana','Bouvet Island','Brazil','British Indian Ocean Territory','Brunei Darussalam','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Cape Verde','Cayman Islands','Central African Republic','Chad','Chile','China','Christmas Island','Cocos Keeling) Islands','Colombia','Comoros','Congo','Congo The Democratic Republic Of The','Cook Islands','Costa Rica','Cote D\'Ivoire','Croatia','Cuba','Curacao','Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Ethiopia','Falkland Islands Malvinas','Faroe Islands','Fiji','Finland','France','French Guiana','French Polynesia','French Southern Territories','Gabon','Gambia','Georgia','Germany','Ghana','Gibraltar','Greece','Greenland','Grenada','Guadeloupe','Guam','Guatemala','Guernsey','Guinea','Guinea-Bissau','Guyana','Haiti','Heard Island And Mcdonald Islands','Holy See Vatican City State','Honduras','Hong Kong','Hungary','Iceland','India','Indonesia','Iran Islamic Republic Of','Iraq','Ireland','Isle Of Man','Israel','Italy','Jamaica','Japan','Jersey','Jordan','Kazakhstan','Kenya','Kiribati','Korea Democratic People\'S Republic Of','Korea Republic Of','Kuwait','Kyrgyzstan','Lao People\'S Democratic Republic','Latvia','Lebanon','Lesotho','Liberia','Libyan Arab Jamahiriya','Liechtenstein','Lithuania','Luxembourg','Macao','Macedonia The Former Yugoslav Republic Of','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Martinique','Mauritania','Mauritius','Mayotte','Mexico','Micronesia Federated States Of','Moldova Republic Of','Monaco','Mongolia','Montenegro','Montserrat','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Caledonia','New Zealand','Nicaragua','Niger','Nigeria','Niue','Norfolk Island','Northern Mariana Islands','Norway','Oman','Pakistan','Palau','Palestinian Territory Occupied','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Pitcairn','Poland','Portugal','Puerto Rico','Qatar','Reunion','Romania','Russian Federation','Rwanda','Saint Barthelemy','Saint Helena Ascension And Tristan Da Cunha','Saint Kitts And Nevis','Saint Lucia','Saint Martin French Part','Saint Pierre And Miquelon','Saint Vincent And The Grenadines','Samoa','San Marino','Sao Tome And Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Sint Maarten Dutch Part','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Georgia And The South Sandwich Islands','Spain','Sri Lanka','Sudan','Suriname','Svalbard And Jan Mayen','Swaziland','Sweden','Switzerland','Syrian Arab Republic','Taiwan Province Of China','Tajikistan','Tanzania United Republic Of','Thailand','Timor-Leste','Togo','Tokelau','Tonga','Trinidad And Tobago','Tunisia','Turkey','Turkmenistan','Turks And Caicos Islands','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','United States Minor Outlying Islands','Uruguay','Uzbekistan','Vanuatu','Venezuela Bolivarian Republic Of','Viet Nam','Virgin Islands British','Virgin Islands U.S.','Wallis And Futuna','Western Sahara','Yemen','Zambia','Zimbabwe']; 
+	var region_options, dir_root;
+	if (pathURL('domestic')){
+	 var cList = $('select#inStates');
+	 region_options = states;
+	 dir_root = 'domestic';
+	 }
+	else if (pathURL('international')){
+	 var cList = $('select#country');
+	 region_options = countries;
+	 dir_root = 'international';
+	}
+	$.each(region_options, function(i){
+	 var opt = $('<option/>')
+	 .attr('value', region_options[i])
+	 .text(region_options[i])
+	 .appendTo(cList);
+	});	
+	
+	var products_path = 'http://' + window.location.hostname + '/' + dir_root + "/products/",
+	enquiry_url = window.location.href;
+	
+	if(enq_type == "enquiry"){
+	 $("#value_enq_feedbk").text("Enquiry");
+	 $("#value_message_label").text("Enquiry *");
+	 $("#value_submit_button").text("Submit Enquiry");
+	 $("input#type_msg").val(enq_type);
+	 }
+	else if(enq_type == "feedback"){
+	 $("#value_enq_feedbk").text("Feedback");
+	 $("#value_message_label").text("Feedback *");
+	 $("#value_submit_button").text("Provide Feedback");
+	 $("input#type_msg").val(enq_type);
+	}
+	if(!enq_type) {
+	 $(".enqForm").hide();
+	 $('input#page_url').val(enquiry_url);
+	}
+	if(enq_type && e_enqArr[xml_i].pxml_id == enq_xml){
+	 $("#value_prdName").html(e_enqArr[xml_i].p_title);
+	 $("#value_prdCode").text(e_enqArr[xml_i].p_gscode);
+	 $("#value_prdCat").text(e_enqArr[xml_i].p_category);
+	 $('input#page_url').val(products_path + e_enqArr[xml_i].p_url);		
+	 $('select#category option').each(function(){
+		var category_val = $(this).val();
+		if((e_enqArr[xml_i].p_category).toLowerCase().indexOf(category_val.toLowerCase()) > -1)
+		 if(enq_type == "enquiry" | enq_type == "feedback")
+			$('select#category option[value="' + category_val +'"]').prop("selected", true);
+	 });
+	}
+ }
+// END of Loading content on Enquiry Page 
+//START XML Response Parser Function
+function data_xmlParse(xmlResponse){
+	var data = $("item", xmlResponse).map(function() {
+	return {
+		pxml_id: $(this).find("p_id").text(),
+		p_title: $(this).find("p_name").text().replace(/#R#/g, "&reg;").replace(/#T#/g, "&trade;"),
+		p_gen_name: $(this).find("p_gen").text(),
+		p_category: $(this).find("p_type").text(),
+		p_query: $(this).find("p_query").text(),
+		p_gscode: $(this).find("p_gs").text(),
+		p_img: $(this).find("p_img").text(),
+		p_url: $(this).find(" p_url").text(),
+		  }
+	});
+  return data;
+ }
+// END XML Parser
+//START Autocomplete for search Input
+function autocomplete_search(xmlData, p_folder){
+	var data = $.map(xmlData, function(item) {
+		return {
+			id: item.pxml_id,
+			value: item.p_title.replace(/&reg;/g, "").replace(/&trade;/g, ""),
+			valueTitle: item.p_title,
+			url: item.p_url,
+			gen_name: item.p_gen_name.split('/'),
+			query: item.p_query.split('/'),
+			category: item.p_category,
+			}
+         });
+		 		 
+		 $('a.w-search-show').on('click', function(){
+		 $('body').addClass('noscroll_overflow');
+		 });
+		 
+		 $('a.w-search-close').on('click', function(){
+		 $('body').removeClass('noscroll_overflow');
+		 });
+		 
+		 $(document).keyup(function(e) {
+			if (e.keyCode == 27) { $('body').removeClass('noscroll_overflow'); }   // esc
+		});
+		 
+		 
+	var widgetInst = $("input#q").autocomplete({
+		source: function products(request, response) {   // Function PRODUCTS()
+		function hasMatch(s) {
+		return s.toLowerCase().indexOf(request.term.toLowerCase())!==-1;
+			}
+			var i, l, obj, matches = [], alt_string = [];
+			if (request.term==="") {
+			response([]);
+			return;
+			}
+			for  (i = 0; i < data.length; i++) {
+			  obj = data[i];
+			  alt_string = $.merge( $.merge( [], obj.gen_name ), obj.query );
+			
+			  function truefalse(){
+				for(j=0;j<alt_string.length;j++){
+				 if( alt_string[j]!='0' && hasMatch(alt_string[j]) )
+				  return true;
+				 }
+				return false;
+				}
+				if (hasMatch(obj.value) || truefalse()) {
+				 matches.push(obj);
+				 }
+			}
+				response(matches);
+		}, // END OF Function PRODUCTS() //
+		
+		focus: function (event, ui) {
+        $(event.target).val(ui.item.value);
+		$(event.target).select();
+		event.preventDefault();
+        return false;
+		},
+		select: function (event, ui) {
+		 var productsURL = p_folder + ui.item.url;
+		 window.location = productsURL;
+		 }
+     }).data('ui-autocomplete');
+	 
+	 widgetInst._renderMenu = function( ul, items ) {
+      var that = this,
+        currentCategory = "";
+      $.each( items, function( index, item ) {
+        var li;
+        if ( item.category != currentCategory ) {
+          ul.append( "<li class='ui-autocomplete-category'><i class='fa fa-plus-square'></i> " + item.category + "</li>" );
+          currentCategory = item.category;
+        }
+        li = that._renderItemData( ul, item );
+        if ( item.category ) {
+          li.attr( "aria-label", item.category + " : " + item.value );
+        }
+      });
+    }
+	widgetInst._renderItem = function( ul, item ) {
+      return $( "<li>" )
+        .append( "<a>" + item.valueTitle + "&nbsp;<span class='ui-autocomplete-gen_name generic_name' style='font-size: 0.8em;'>" + item.gen_name + "</span></a>" )
+        .appendTo( ul );
+    };
+	
+  }
+// END Autocomplete Search
+//Common Function (Check for URI Dir/Location)
+  function pathURL(path_string){
+	var url = window.location.href, path_active_y_n;
+	if(url.indexOf(path_string) > -1)
+	path_active_y_n = true
+	else path_active_y_n = false;
+	return path_active_y_n;
+  }
+// END URI Folder Check
+//Common Function (Get Parameter Value)
+  function getUrlParameter(sParam){
+	var sPageURL = window.location.search.substring(1);
+	var sURLVariables = sPageURL.split('&');
+	for (var i = 0; i < sURLVariables.length; i++) {
+		var sParameterName = sURLVariables[i].split('=');
+		if (sParameterName[0] == sParam){
+			return sParameterName[1];
+		  }
+	  }
+  }
+//END Get Parameter Value
+//Google Analytics EVENT Actions *
+///////// EVENT 1 ::: PDF Download
+ $(document).ready(function(){
+	var all_event_category, label_pdf;
+	
+	if(pathURL('domestic')) all_event_category = 'Domestic';
+	else if(pathURL('international')) all_event_category = 'International';	
+  
+  $('a.catalog_download').on('click', function() {
+	 label_pdf = $(this).attr('href');
+	if (typeof _gaq !== 'undefined') { _gaq.push(['_trackEvent', all_event_category, 'Catalog (PDF) Downloads', label_pdf, 1]); }
+	if (typeof ga !== 'undefined') { ga('send', 'event', all_event_category, 'Catalog (PDF) Downloads', label_pdf, 1); }
+  });
+ }); //Document Ready() 
+/* END Google Analytics EVENT Actions */
